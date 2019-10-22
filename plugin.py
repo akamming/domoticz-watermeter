@@ -25,7 +25,7 @@
             <li>Resistor Type - Configure the correct type of resistor. If the NPN is soldered to the GPIO without any physical resistors in a scheme, you definitely should configure a resistor here. </li>
             <li>Interrupt Mode - Configure if you want the meter to be triggered if the pin goes from 1 to 0 (falling), from 0 to -1 (rising) or on both changes (both). Normally it should be either falling or rising, but not both (both will get you double readings) </li>
             <li>Debounce Time - Configure the cooldown time after the interrupt to prevent interrupt flooding. A high number is recommended, but it should be less then the time it takes to have 1 liter going throught your watermeter, to prevent lost measurements </li> 
-            <li>Meter Reading File - The path of the file where you want the actual meter reading to be stored. If you do not specifiy a path, your domoticz working directory will be used</li>
+            <li>Meter Reading File - The path of the file where you want the actual meter reading to be stored. If you do not specifiy a path, the homefolder of this plugin will be used</li>
             <li>Default Meter Reading - Will be the initial value when the Meter Reading File is created</li>
         </ul>
     </description>
@@ -87,12 +87,6 @@
          </param>
          <param field="Mode5" label="Meter Reading File" width="150px" required="true" default="meterstand.txt" />
          <param field="Mode6" label="Default Meter Reading" width="70px" default="1468502"/>
-         <param field="Mode7" label="Debug" width="150px">
-            <options>
-                <option label="False" value="0"/>
-                <option label="True" value="1"  default="true" />
-         </options>
-         </param>
      </params>
 </plugin>
 """
@@ -101,26 +95,11 @@ import  RPi.GPIO as GPIO
 
 class BasePlugin:
 
+    global debug
+    debug=True
 
     def Interrupt(channel):
           Domoticz.Log ("Caught interrupt")
-
-    def DumpConfigToLog():
-        for x in Parameters:
-            if Parameters[x] != "":
-                Domoticz.Log( "'" + x + "':'" + str(Parameters[x]) + "'")
-                Domoticz.Log("Device count: " + str(len(Devices)))
-
-        for x in Devices:
-            Domoticz.Log("Device:           " + str(x) + " - " + str(Devices[x]))
-            Domoticz.Log("Device ID:       '" + str(Devices[x].ID) + "'")
-            Domoticz.Log("Device Name:     '" + Devices[x].Name + "'")
-            Domoticz.Log("Device nValue:    " + str(Devices[x].nValue))
-            Domoticz.Log("Device sValue:   '" + Devices[x].sValue + "'")
-            Domoticz.Log("Device LastLevel: " + str(Devices[x].LastLevel))
-        return
-
-
 
     enabled = False
     def __init__(self):
@@ -128,9 +107,14 @@ class BasePlugin:
         return
 
     def onStart(self):
-        Domoticz.Log("onStart called")
-        Domoticz.Device(Name="watermeter", Unit=1, Type=113, Subtype=0, Switchtype=2, Image=17).Create()
-        Domoticz.Log(str(Parameters["Mode5"]))
+        Debug("OnStart called")
+        if debug==True:
+            DumpConfigToLog()
+
+        if (len(Devices) == 0):
+            Domoticz.Device(Name="watermeter", Unit=1, Type=113, Subtype=0, Switchtype=2, Image=17).Create()
+        
+        
         # GPIO.setmode(GPIO.BOARD)
         # GPIO.add_event_detect(12, GPIO.FALLING, callback = self.Interrupt, bouncetime = 350)
 
@@ -194,13 +178,17 @@ def onHeartbeat():
 def DumpConfigToLog():
     for x in Parameters:
         if Parameters[x] != "":
-            Domoticz.Debug( "'" + x + "':'" + str(Parameters[x]) + "'")
+            Domoticz.Log( "'" + x + "':'" + str(Parameters[x]) + "'")
     Domoticz.Debug("Device count: " + str(len(Devices)))
     for x in Devices:
-        Domoticz.Debug("Device:           " + str(x) + " - " + str(Devices[x]))
-        Domoticz.Debug("Device ID:       '" + str(Devices[x].ID) + "'")
-        Domoticz.Debug("Device Name:     '" + Devices[x].Name + "'")
-        Domoticz.Debug("Device nValue:    " + str(Devices[x].nValue))
-        Domoticz.Debug("Device sValue:   '" + Devices[x].sValue + "'")
-        Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
+        Domoticz.Log("Device:           " + str(x) + " - " + str(Devices[x]))
+        Domoticz.Log("Device ID:       '" + str(Devices[x].ID) + "'")
+        Domoticz.Log("Device Name:     '" + Devices[x].Name + "'")
+        Domoticz.Log("Device nValue:    " + str(Devices[x].nValue))
+        Domoticz.Log("Device sValue:   '" + Devices[x].sValue + "'")
+        Domoticz.Log("Device LastLevel: " + str(Devices[x].LastLevel))
     return
+
+def Debug(text):
+    if (debug):
+        Domoticz.Log(text)
