@@ -1,7 +1,7 @@
 # domoticz-watermeter
 Python plugin for measuring your watermeter with a NPN sensor on a GPIO pin
 
-##why this plugin?
+## why this plugin?
 i struggeled with all the manual steps for getting a watermeter in domoticz, using instructions like
 https://www.domoticz.com/forum/viewtopic.php?f=28&t=17123
 or 
