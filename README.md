@@ -20,5 +20,5 @@ is only supported on a raspberry pi (only tested on a 3b+)
 - give the command "git clone https://github.com/akamming/domoticz-watermeter.git"
 - restart domoticz
 - add the hardware. In the hardwarepage there is a description on how to configure the plugin
-- Make sure your rfxcom divider setting for water (Setup/Settings/Counter settings) is set to 1000.
+- Make sure your rfxcom divider setting for water (Setup/Settings/Counter settings) in domoticz is set to 1000.
 - have fun!
