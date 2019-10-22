@@ -27,6 +27,15 @@
             <li>Debounce Time - Configure the cooldown time after the interrupt to prevent interrupt flooding. A high number is recommended, but it should be less then the time it takes to have 1 liter going throught your watermeter, to prevent lost measurements </li> 
             <li>Meter Reading File - The path of the file where you want the actual meter reading to be stored. If you do not specifiy a path, the homefolder of this plugin will be used</li>
             <li>Default Meter Reading - Will be the initial value when the Meter Reading File is created</li>
+
+            <br/>
+            Last but not least: A normal (dutch) watermeter measures 1 liter every pulse on the gpio pin. The meter in domoticz is of the type m3. So in order to have this meter to show the correct amount, you have to change the RFX Meter/Counter Setup in domoticz. If this is not set correctly: <br />
+            - Go to domoticz web interface<br/>
+            - Click on Setup<br/>
+            - Click on Settings<br/>
+            - Click on Meters/Counters<br/>
+            - Set the value of the water divider to 1000  (1m3 = 1000l ;-))<br/>
+            - Click on Apply Settings  <br/><br/>
         </ul>
     </description>
     <params>
@@ -46,8 +55,8 @@
             <option label="GPIO15" value="15"/>
             <option label="GPIO16" value="16"/>
             <option label="GPIO17" value="17"/>
-            <option label="GPIO18" value="18"/>
-            <option label="GPIO19" value="19" default="true"/>
+            <option label="GPIO18" value="18" default="true"/>
+            <option label="GPIO19" value="19"/>
             <option label="GPIO20" value="20"/>
             <option label="GPIO21" value="21"/>
             <option label="GPIO22" value="22"/>
@@ -100,11 +109,10 @@ class BasePlugin:
     global debug
     global fn
     global counter
+    global InitialReading
 
-    debug=True # set to true to enable debug logging
+    debug=False # set to true to enable debug logging
 
-    def Interrupt(channel):
-          Domoticz.Log ("Caught interrupt")
 
     enabled = False
     def __init__(self):
@@ -156,35 +164,23 @@ class BasePlugin:
         Debug("Setting up GPIO")
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(gpio_pin, GPIO.IN, pull_up_down = resistor)
-        GPIO.add_event_detect(gpio_pin, interrupt, callback = self.Interrupt, bouncetime = bouncetime)
-
-        #fn = mode 5, meterstand = mode 6
-
-        #Open meterstand.txt file en lees meterstand
-        #Als meterstand.txt niet aanwezig is maakt script bestand aan en vult de meterstand
-        if os.path.exists(fn):
-            #f = file(fn, "r+")
-            f = open(fn, "r+")
-            inhoud = f.readline()
-            a,b,c = inhoud.split()
-            Counter = int(c)
-            Debug("Meter file exists, current counter is "+str(Counter))
-            counter=Counter
-
-        else:
-            f = open(fn, "w")
-            f.write( 'meterstand = ' + repr(InitialReading))
-            f.close()
-            Debug("Meter file created with initial reading ("+str(InitialReading)+")")
-            counter=InitialReading
+        GPIO.add_event_detect(gpio_pin, interrupt, callback = Interrupt, bouncetime = bouncetime)
         
         #Create device if needed
         if (len(Devices) == 0):
             Debug("Creating watermeter device")
-            Domoticz.Device(Name="watermeter", Unit=1, Type=113, Subtype=0, Switchtype=2, Image=11).Create()
+            Domoticz.Device(Name="Water Usage", Unit=1, Type=113, Subtype=0, Switchtype=2).Create()
 
-        #update the device with the found counter
+        #Get current counter
+        counter=GetMeterFile()
+        if counter==-1:
+            Debug("No meter file, resetting to Initial Value ("+str(InitialReading)+")")
+            counter=InitialReading
+            WriteMeterFile(counter)
+
+        # Update Sensor with counter
         Devices[1].Update(nValue=counter, sValue=str(counter))
+
 
     def onStop(self):
         Debug("onStop called: Cleaning up GPIO")
@@ -207,6 +203,7 @@ class BasePlugin:
 
     def onHeartbeat(self):
         Debug("onHeartbeat called")
+        # Interrupt(1) #For testing purposes
 
 global _plugin
 _plugin = BasePlugin()
@@ -241,6 +238,7 @@ def onDisconnect(Connection):
 
 def onHeartbeat():
     global _plugin
+    Interrupt(1)
     _plugin.onHeartbeat()
 
     # Generic helper functions
@@ -257,6 +255,43 @@ def DumpConfigToLog():
         Domoticz.Log("Device sValue:   '" + Devices[x].sValue + "'")
         Domoticz.Log("Device LastLevel: " + str(Devices[x].LastLevel))
     return
+
+def GetMeterFile():
+    fn=Parameters["Mode5"] # Get filename
+    Debug("GetMeterFile() called")
+    if os.path.exists(fn):
+        f = open(fn, "r+")
+        inhoud = f.readline()
+        a,b,c = inhoud.split()
+        Counter = int(c)
+        Debug("Meter file exists, current counter is "+str(Counter))
+        return Counter
+    else:
+        Debug("No Meter File found")
+        return -1
+
+def WriteMeterFile(counter):
+    fn=Parameters["Mode5"] # get Filename
+    Debug("WriteMeterFile("+str(counter)+") called")
+    f = open( fn, 'w')
+    f.write( 'meterstand = ' + repr(counter))
+    f.close()
+
+def Interrupt(channel):
+    Domoticz.Log ("Processing Meter Pulse (1 liter water)")
+
+    counter=GetMeterFile()
+    if counter==-1:
+        counter=int(Parameters["Mode6"]) # Get initial value from settings
+        Debug("No meter file, resetting to initial value ("+str(counter)+")")
+    else:
+        counter+=1
+        Debug("incremented counter to "+str(counter))
+
+    WriteMeterFile(counter)
+
+    #update the device with the found counter
+    Devices[1].Update(nValue=counter, sValue=str(counter))
 
 def Debug(text):
     if (debug):
