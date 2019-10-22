@@ -92,11 +92,16 @@
 """
 import Domoticz
 import  RPi.GPIO as GPIO
+import os
 
 class BasePlugin:
 
+    #setup global vars
     global debug
-    debug=True
+    global fn
+    global counter
+
+    debug=True # set to true to enable debug logging
 
     def Interrupt(channel):
           Domoticz.Log ("Caught interrupt")
@@ -111,33 +116,97 @@ class BasePlugin:
         if debug==True:
             DumpConfigToLog()
 
+
+        #get pin config from settings
+        gpio_pin=int(Parameters["Mode1"])
+
+        Debug("Pin "+str(gpio_pin)+" was configured")
+        if Parameters["Mode2"]=="PU":
+            Debug("Pull up resistor configured")
+            resistor=GPIO.PUD_UP
+        elif Parameters["Mode2"]=="PD":
+            Debug("Pull Down resistor configured")
+            resistor=GPIO.PUD_DOWN
+        else:
+            Debug("No resistor configured")
+            resistor=GPIO.PUD_NONE
+        Debug("Resistortype = ["+str(resistor)+"]")
+
+        if Parameters["Mode3"]=="Falling":
+            interrupt=GPIO.FALLING
+            Debug("Falling intterrupt detected")
+        elif Parameters["Mode3"]==Rising:
+            interrupt=GPIO.RISING
+            Debug("Rising Interrupt detected")
+        else:
+            interrupt=GPIO.BOTH
+            Debug("Both interrupt detected")
+        Debug("Interrupt Type="+str(interrupt))
+
+        bouncetime=int(Parameters["Mode4"])
+        Debug("Bouncetime="+str(bouncetime))
+
+        fn=Parameters["Mode5"]
+        InitialReading=int(Parameters["Mode6"])
+        Debug("Filename "+fn+" detected")
+        Debug("Initial Reading "+str(InitialReading)+" detected")
+
+
+        # Setting up GPIO
+        Debug("Setting up GPIO")
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(gpio_pin, GPIO.IN, pull_up_down = resistor)
+        GPIO.add_event_detect(gpio_pin, interrupt, callback = self.Interrupt, bouncetime = bouncetime)
+
+        #fn = mode 5, meterstand = mode 6
+
+        #Open meterstand.txt file en lees meterstand
+        #Als meterstand.txt niet aanwezig is maakt script bestand aan en vult de meterstand
+        if os.path.exists(fn):
+            #f = file(fn, "r+")
+            f = open(fn, "r+")
+            inhoud = f.readline()
+            a,b,c = inhoud.split()
+            Counter = int(c)
+            Debug("Meter file exists, current counter is "+str(Counter))
+            counter=Counter
+
+        else:
+            f = open(fn, "w")
+            f.write( 'meterstand = ' + repr(InitialReading))
+            f.close()
+            Debug("Meter file created with initial reading ("+str(InitialReading)+")")
+            counter=InitialReading
+        
+        #Create device if needed
         if (len(Devices) == 0):
-            Domoticz.Device(Name="watermeter", Unit=1, Type=113, Subtype=0, Switchtype=2, Image=17).Create()
-        
-        
-        # GPIO.setmode(GPIO.BOARD)
-        # GPIO.add_event_detect(12, GPIO.FALLING, callback = self.Interrupt, bouncetime = 350)
+            Debug("Creating watermeter device")
+            Domoticz.Device(Name="watermeter", Unit=1, Type=113, Subtype=0, Switchtype=2, Image=11).Create()
+
+        #update the device with the found counter
+        Devices[1].Update(nValue=counter, sValue=str(counter))
 
     def onStop(self):
-        Domoticz.Log("onStop called")
+        Debug("onStop called: Cleaning up GPIO")
+        GPIO.cleanup()
 
     def onConnect(self, Connection, Status, Description):
-        Domoticz.Log("onConnect called")
+        Debug("onConnect called")
 
     def onMessage(self, Connection, Data):
-        Domoticz.Log("onMessage called")
+        Debug("onMessage called")
 
     def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
+        Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
-        Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
+        Debug("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
 
     def onDisconnect(self, Connection):
-        Domoticz.Log("onDisconnect called")
+        Debug("onDisconnect called")
 
     def onHeartbeat(self):
-        Domoticz.Log("onHeartbeat called")
+        Debug("onHeartbeat called")
 
 global _plugin
 _plugin = BasePlugin()
