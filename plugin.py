@@ -238,7 +238,7 @@ def onDisconnect(Connection):
 
 def onHeartbeat():
     global _plugin
-    Interrupt(1)
+    #Interrupt(1)
     _plugin.onHeartbeat()
 
     # Generic helper functions
