@@ -112,7 +112,6 @@ class BasePlugin:
 
     debug=True              # set to true to enable debug logging
     fakereading=True        # for testing purposes. Will generate a "tick" every 10 seconds
-    InitialReading=1234;    # Set to the number to be created the 1st time
 
 
     enabled = False
@@ -288,8 +287,8 @@ def Interrupt(channel):
     counter=GetMeterFile()
     if counter==-1:
         # counter=int(Parameters["Mode6"]) # Get initial value from settings
-        counter=InitialReading # Configured above in the script
-        Debug("No meter file, resetting to initial value ("+str(counter)+")")
+        counter=0 # Configured above in the script
+        Debug("No meter file, creating a new one")
     else:
         increment=int(Parameters["Mode6"])
         counter+=increment 
