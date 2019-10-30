@@ -6,7 +6,7 @@
 <plugin key="WMPS" name="WaterMeter NPN plugin" author="akamming" version="1.0.1" wikilink="https://www.domoticz.com/wiki/Plugins" externallink="https://www.google.com/">
     <description>
         <h2>Watermeter</h2><br/>
-        Plugin version of the Watermeter python script using a NPN sensor
+        Plugin version of the Watermeter python script using a NPN sensor<br/>
         <h3>Features</h3>
         <ul style="list-style-type:square">
             <li>Exports the pin (not necessary to do before starting domoticz)</li>
@@ -26,7 +26,7 @@
             <li>Interrupt Mode - Configure if you want the meter to be triggered if the pin goes from 1 to 0 (falling), from 0 to -1 (rising) or on both changes (both). Normally it should be either falling or rising, but not both (both will get you double readings) </li>
             <li>Debounce Time - Configure the cooldown time after the interrupt to prevent interrupt flooding. A high number is recommended, but it should be less then the time it takes to have 1 liter going throught your watermeter, to prevent lost measurements </li> 
             <li>Meter Reading File - The path of the file where you want the actual meter reading to be stored. If you do not specifiy a path, the homefolder of this plugin will be used</li>
-            <li>Default Meter Reading - Will be the initial value when the Meter Reading File is created</li>
+            <li> Increment - The amount your domoticz counter must be incremented when a pulse of the watermeter is detected. In NL this is normally 1 liter. In belgium apparently this is 2 ticks per liter (value should then be 0.5).</li>
 
             <br/>
             Last but not least: A normal (dutch) watermeter measures 1 liter every pulse on the gpio pin. The meter in domoticz is of the type m3. So in order to have this meter to show the correct amount, you have to change the RFX Meter/Counter Setup in domoticz. If this is not set correctly: <br />
@@ -103,23 +103,28 @@ import Domoticz
 import  RPi.GPIO as GPIO
 import os
 
+#setup global vars
+#global debug
+#global fakereading
+
+fakereading=False        # for testing purposes. Will generate a "tick" every 10 seconds
+
+#Check if we have to go in debug mode
+debug=False             # set to true to enable debug logging
+#if os.path.exists(str(Parameters["HomeFolder"])+"DEBUG"): 
+
 class BasePlugin:
 
-    #setup global vars
-    global debug
-    global fakereading
-
-    fakereading=True        # for testing purposes. Will generate a "tick" every 10 seconds
-
-    #Check if we have to go in debug mode
-    debug=False              # set to true to enable debug logging
-    #if os.path.exists(str(Parameters["HomeFolder"])+"DEBUG"): 
 
     enabled = False
     def __init__(self):
         return
 
     def onStart(self):
+        global debug
+        global fakereading
+
+
         #Check if we have to switch on debug mode
         if os.path.exists(str(Parameters["HomeFolder"])+"DEBUG"): 
             debug=True
