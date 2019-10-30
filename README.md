@@ -8,12 +8,12 @@ or
 https://ehoco.nl/watermeter-uitlezen-in-domoticz-lua-script/
 
 so i automated the following steps by rewriting the python script i found in the thread above to this plugin
-- No more exporting pins in shell scripts
-- No manual steps to keep a python script up and running on your system
-- No manual steps to create the counter
+- Pin is automatically exported (no need for exporting the pin in shell scripts before starting domoticz)
+- pluging starts and stops with domoticz, so no steps to keep a seperate python script up and running on your system all is handled within domoticz
+- Counter is automatically created, so no difficult json commands to create the counter manually
 
 ## support
-is only supported on a raspberry pi (only tested on a 3b+)
+is only tested on  a raspberry pi 3b+
 
 ## Installation 
 - go to you plugins directory
