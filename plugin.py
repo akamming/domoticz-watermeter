@@ -192,6 +192,7 @@ class BasePlugin:
 
         #Get current counter
         counter=GetMeterFile()
+        InitialReading=0
         if counter==-1:
             Debug("No meter file, creating one with value  ("+str(InitialReading)+")")
             counter=InitialReading
