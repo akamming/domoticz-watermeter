@@ -2,7 +2,7 @@
 Python plugin for measuring your watermeter with a NPN sensor on a GPIO pin
 
 ## why this plugin?
-i struggeled with all the manual steps for getting a watermeter in domoticz, using instructions like
+I struggeled with all the manual steps for getting a watermeter in domoticz, using instructions like
 https://www.domoticz.com/forum/viewtopic.php?f=28&t=17123
 or 
 https://ehoco.nl/watermeter-uitlezen-in-domoticz-lua-script/
@@ -16,6 +16,7 @@ so i automated the following steps by rewriting the python script i found in the
 is only tested on  a raspberry pi 3b+
 
 ## Installation 
+- install the dependency by giving the command "sudo apt-get install python3-rpi.gpio"
 - go to you plugins directory
 - give the command "git clone https://github.com/akamming/domoticz-watermeter.git"
 - restart domoticz
