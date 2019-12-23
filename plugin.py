@@ -156,8 +156,6 @@ class BasePlugin:
             resistor=GPIO.PUD_DOWN
         else:
             Debug("No resistor configured")
-            resistor=GPIO.PUD_NONE
-        Debug("Resistortype = ["+str(resistor)+"]")
 
         if Parameters["Mode3"]=="Falling":
             interrupt=GPIO.FALLING
@@ -182,7 +180,12 @@ class BasePlugin:
         # Setting up GPIO
         Debug("Setting up GPIO")
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(gpio_pin, GPIO.IN, pull_up_down = resistor)
+        if Parameters["Mode2"]=="PU" or Parameters["Mode2"]=="PD" :
+            Debug("Adding resistortype"+str(Parameters["Mode2"]))
+            GPIO.setup(gpio_pin, GPIO.IN, pull_up_down = resistor)
+        else:
+            GPIO.setup(gpio_pin, GPIO.IN)
+
         GPIO.add_event_detect(gpio_pin, interrupt, callback = Interrupt, bouncetime = bouncetime)
         
         #Create device if needed
