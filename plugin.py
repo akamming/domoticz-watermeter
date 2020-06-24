@@ -1,9 +1,9 @@
 # Basic Python Plugin Example
 #
-# Author: GizMoCuz
+# Author: akamming / martin-g-it
 #
 """
-<plugin key="WMPS" name="WaterMeter NPN plugin" author="akamming" version="1.0.1" wikilink="https://www.domoticz.com/wiki/Plugins" externallink="https://www.google.com/">
+<plugin key="WMPS" name="WaterMeter NPN plugin" author="akamming / martin-g-it" version="1.0.2" wikilink="https://www.domoticz.com/wiki/Plugins" externallink="https://www.google.com/">
     <description>
         <h2>Watermeter</h2><br/>
         Plugin version of the Watermeter python script using a NPN sensor<br/>
@@ -55,10 +55,10 @@
             <option label="GPIO15" value="15"/>
             <option label="GPIO16" value="16"/>
             <option label="GPIO17" value="17"/>
-            <option label="GPIO18" value="18" default="true"/>
+            <option label="GPIO18" value="18"/>
             <option label="GPIO19" value="19"/>
             <option label="GPIO20" value="20"/>
-            <option label="GPIO21" value="21"/>
+            <option label="GPIO21" value="21" default="true"/>
             <option label="GPIO22" value="22"/>
             <option label="GPIO23" value="23"/>
             <option label="GPIO24" value="24"/>
@@ -77,6 +77,7 @@
          <options>
             <option label="Falling" value="Falling" default="true"/>
             <option label="Rising" value="Rising"/>
+            <option label="Both" value="Both"/>	
         </options>
         </param>
          <param field="Mode4" label="debounce time (ms)" width="150px" required="true">
@@ -92,16 +93,24 @@
             <option label="400" value="400" />
             <option label="450" value="450" />
             <option label="500" value="500" />
+			<option label="750" value="500" />
+            <option label="1000" value="1000" />
+			<option label="1250" value="1250" />
+            <option label="1500" value="1500" />
+			<option label="1750" value="1750" />
+            <option label="2000" value="2000" />
          </options>
          </param>
-         <param field="Mode5" label="Meter Reading File" width="150px" required="true" default="meterstand.txt" />
+         <param field="Mode5" label="Meter Reading File" width="150px" required="true" default="meterstand_water.txt" />
          <param field="Mode6" label="Increment" width="70px" default="1"/>
      </params>
 </plugin>
 """
 import Domoticz
-import  RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import os
+import time
+
 
 #setup global vars
 #global debug
@@ -110,8 +119,11 @@ import os
 fakereading=False        # for testing purposes. Will generate a "tick" every 10 seconds
 
 #Check if we have to go in debug mode
-debug=False             # set to true to enable debug logging
+debug=False #True/False             # set to true to enable debug logging
 #if os.path.exists(str(Parameters["HomeFolder"])+"DEBUG"): 
+
+last_value=0
+interrupt = GPIO.BOTH
 
 class BasePlugin:
 
@@ -123,14 +135,15 @@ class BasePlugin:
     def onStart(self):
         global debug
         global fakereading
-
+        global last_value
+        global interrupt
 
         #Check if we have to switch on debug mode
         if os.path.exists(str(Parameters["HomeFolder"])+"DEBUG"): 
             debug=True
             Domoticz.Log("File "+str(Parameters["HomeFolder"])+"DEBUG"+" exists, switching on Debug mode")
         else:
-            debug=False
+            debug=False #True/False
 
         #Check if we have to switch on pulse for testin purposes
         if os.path.exists(str(Parameters["HomeFolder"])+"TESTPULSE"): 
@@ -159,8 +172,8 @@ class BasePlugin:
 
         if Parameters["Mode3"]=="Falling":
             interrupt=GPIO.FALLING
-            Debug("Falling intterrupt detected")
-        elif Parameters["Mode3"]==Rising:
+            Debug("Falling interrupt detected")
+        elif Parameters["Mode3"]=="Rising":
             interrupt=GPIO.RISING
             Debug("Rising Interrupt detected")
         else:
@@ -186,8 +199,12 @@ class BasePlugin:
         else:
             GPIO.setup(gpio_pin, GPIO.IN)
 
-        GPIO.add_event_detect(gpio_pin, interrupt, callback = Interrupt, bouncetime = bouncetime)
-        
+        # Store initial value
+        last_value=GPIO.input(gpio_pin)
+
+        # Set GPIO event detection with interrupt on both rising and falling for false positive detection
+        GPIO.add_event_detect(gpio_pin, GPIO.BOTH, callback = Interrupt, bouncetime = bouncetime)  
+
         #Create device if needed
         if (len(Devices) == 0):
             Debug("Creating watermeter device")
@@ -285,9 +302,9 @@ def GetMeterFile():
     Debug("GetMeterFile() called")
     if os.path.exists(fn):
         f = open(fn, "r+")
-        inhoud = f.readline()
-        a,b,c = inhoud.split()
-        Counter = float(c)
+        line = f.readline()
+        a,b,c = line.split()
+        Counter = int(c) #float(c)
         Debug("Meter file exists, current counter is "+str(Counter))
         return Counter
     else:
@@ -302,6 +319,46 @@ def WriteMeterFile(counter):
     f.close()
 
 def Interrupt(channel):
+
+    global last_value
+    global interrupt
+
+    Debug("Start processing...")
+
+    # Get pin config from settings
+    gpio_pin=int(Parameters["Mode1"])
+
+    Debug("Last value GPIO.input("+str(gpio_pin)+") = "+str(last_value))
+    new_value = GPIO.input(gpio_pin)
+    Debug("Detected value GPIO.input("+str(gpio_pin)+") = "+str(new_value))
+    # Sleep for 300 ms to check pin state for false positives and compare with previous known value
+    time.sleep(0.3)
+    #Debug("And awake..")
+    newest_value = GPIO.input(gpio_pin)
+    Debug("Newest value GPIO.input("+str(gpio_pin)+") = "+str(newest_value))
+
+    # Need to filter out the false positive of some power fluctuation
+    # 1. Compare new value with newest (deviation within 300ms seems like a power fluctuation)
+    if new_value != newest_value:
+        Debug("Interrupt detected, but not consistent; false positive -> exit")
+        Domoticz.Log("Interrupt detected; inconsistent; last '"+str(last_value)+"' -> new '"+str(new_value)+"' -> newest '"+str(newest_value)+"'; false positive -> exit")
+        return
+    # 2. Compare newest value with last known value (before trigger)    
+    elif newest_value == last_value:
+        Domoticz.Log("Interrupt detected, but same value; last '"+str(last_value)+"' -> new '"+str(new_value)+"' -> newest '"+str(newest_value)+"'; false positive -> exit")
+        return
+    # 3. We detect both falling and rising (otherwise we can't detect false positives in both ways); but setting for Interrupt mode should be adhered to
+    elif (newest_value == 1 and interrupt == GPIO.FALLING) or (newest_value == 0 and interrupt == GPIO.RISING):
+        Debug("Interrupt detected, but wrong type; last '"+str(last_value)+"' -> new '"+str(new_value)+"'; update 'last_value' with 'new_value' -> exit")
+        last_value = newest_value
+        return
+
+    Debug("Interrupt detected, checks are OK; last '"+str(last_value)+"' -> new '"+str(new_value)+"' -> newest '"+str(newest_value)+"'; change 'last_value' into newest -> continue")
+
+    # Store current value as 'last_value' and continue 
+    last_value = newest_value
+
+    Debug("And we continue increasing the counter..")
     Debug("Processing Meter Pulse (1 liter water)")
 
     counter=GetMeterFile()
@@ -323,7 +380,7 @@ def Interrupt(channel):
     
     #update the device with the found counter
     Devices[1].Update(nValue=int(counter), sValue=str(counter))
-    Domoticz.Log("RFXMeter/RFXMeter counter ("+Devices[1].Name+")")
+    Domoticz.Log("RFXMeter/RFXMeter counter ("+Devices[1].Name+") - "+str(counter))
 
 def Debug(text):
     if (debug):
