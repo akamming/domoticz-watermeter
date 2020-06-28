@@ -233,7 +233,7 @@ class BasePlugin:
         Debug("Bouncetime = "+str(bouncetime))
 
         fn=Parameters["Mode5"]
-        increment=int(Parameters["Mode6"])
+        increment=float(Parameters["Mode6"])
         Debug("Filename "+fn+" detected")
         Debug("increment "+str(increment)+" detected")
 
@@ -351,7 +351,7 @@ def GetMeterFile():
         f = open(fn, "r+")
         line = f.readline()
         a,b,c = line.split()
-        Counter = int(c) #float(c)
+        Counter = float(c)
         Debug("Meter file exists, current counter is "+str(Counter))
         return Counter
     else:
@@ -425,7 +425,7 @@ def Interrupt(channel):
         counter=0 # Configured above in the script
         Debug("No meter file, creating a new one")
     else:
-        increment=int(Parameters["Mode6"])
+        increment=float(Parameters["Mode6"])
         counter+=increment 
         Debug("incremented counter to "+str(counter))
 
