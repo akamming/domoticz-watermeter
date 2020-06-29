@@ -438,7 +438,7 @@ def Interrupt(channel):
     
     #update the device with the found counter
     Devices[1].Update(nValue=int(counter), sValue=str(counter))
-    Domoticz.Log("RFXMeter/RFXMeter counter ("+Devices[1].Name+") - "+str(counter))
+    Domoticz.Log("RFXMeter/RFXMeter counter ("+Devices[1].Name+") - "+str(counter/1000)+" M3")
 
 def Debug(text):
     if (debug):
