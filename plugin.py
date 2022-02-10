@@ -105,11 +105,11 @@
             <option label="400" value="400" />
             <option label="450" value="450" />
             <option label="500" value="500" />
-			<option label="750" value="500" />
+            <option label="750" value="750" />
             <option label="1000" value="1000" />
-			<option label="1250" value="1250" />
+            <option label="1250" value="1250" />
             <option label="1500" value="1500" />
-			<option label="1750" value="1750" />
+            <option label="1750" value="1750" />
             <option label="2000" value="2000" />
          </options>
          </param>
@@ -303,7 +303,6 @@ class BasePlugin:
             Domoticz.Log("RFXMeter/RFXMeter counter ("+Devices[1].Name+") - "+str(counter/1000)+" M3") 
             last_watermeter_value=counter
 
-
 global _plugin
 _plugin = BasePlugin()
 
@@ -407,14 +406,16 @@ def Interrupt(channel):
             # Compare new value with newest (deviation within 300ms seems like a power fluctuation)
             if new_value != newest_value:
                 Debug("Interrupt detected, but not consistent; last '"+str(last_value)+"' -> new '"+str(new_value)+"' -> newest '"+str(newest_value)+"'; false positive -> exit")
-                return
+                #Domoticz.Log("Interrupt detected, but not consistent; last '"+str(last_value)+"' -> new '"+str(new_value)+"' -> newest '"+str(newest_value)+"'; false positive -> exit") ## temporarily disabled due to FindModule bug
+		return
 
         # Last value check logic    
         if check_last_value:
             # Compare newest value with last known value (before trigger)
             if new_value == last_value:
                 Debug("Interrupt detected, but same value; last '"+str(last_value)+"' -> new '"+str(new_value)+"; false positive -> exit")
-                return
+                #Domoticz.Log("Interrupt detected, but same value; last '"+str(last_value)+"' -> new '"+str(new_value)+"; false positive -> exit") ## temporarily disabled due to FindModule bug
+		return
 
             # We detect both falling and rising (otherwise we cannot detect false positives in both ways); but setting for Interrupt mode should be adhered to
         if (new_value == 1 and interrupt == GPIO.FALLING) or (new_value == 0 and interrupt == GPIO.RISING):
