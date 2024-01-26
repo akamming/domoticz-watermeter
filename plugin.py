@@ -302,6 +302,16 @@ class BasePlugin:
         if last_watermeter_value!=counter:
             Domoticz.Log("RFXMeter/RFXMeter counter ("+Devices[1].Name+") - "+str(counter/1000)+" M3") 
             last_watermeter_value=counter
+        else:
+            #For nice grafana: Make sure we also log when there is no usage
+
+            #Create device if it is no longer there 
+            if (len(Devices) == 0): 
+                Debug("Watermeter device gone...Creating watermeter device")
+                Domoticz.Device(Name="Water Usage", Unit=1, Type=113, Subtype=0, Switchtype=2).Create()
+            
+            #update the device with the found counter
+            Devices[1].Update(nValue=int(counter), sValue=str(counter))
 
 
 global _plugin
