@@ -16,7 +16,7 @@ so i automated the following steps by rewriting the python script i found in the
 is only tested on  a raspberry pi 3b+
 
 ## Installation 
-- install the dependency by giving the command "sudo apt-get install python3-rpi.gpio"
+- install the dependency by giving the command "sudo apt-get install python3-gpiozero"
 - go to you plugins directory
 - give the command "git clone https://github.com/akamming/domoticz-watermeter.git"
 - restart domoticz
