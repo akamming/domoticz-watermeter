@@ -119,7 +119,7 @@
 </plugin>
 """
 import Domoticz
-import RPi.GPIO as GPIO
+from gpiozero import Button
 import os
 import time
 
@@ -132,11 +132,6 @@ fakereading=False        # for testing purposes. Will generate a "tick" every 10
 #Check if we have to go in debug mode
 debug=False #True/False             # set to true to enable debug logging
 #if os.path.exists(str(Parameters["HomeFolder"])+"DEBUG"): 
-
-last_value        = 0
-interrupt         = GPIO.BOTH
-check_last_value  = False
-check_consistency = False
 
 last_watermeter_value = 0
 
@@ -154,6 +149,7 @@ class BasePlugin:
         global gpio_pin
         global check_last_value
         global check_consistency
+        global meter
 
         Domoticz.Log("Watermeter plugin started...")
 
@@ -182,57 +178,10 @@ class BasePlugin:
         gpio_pin=int(Parameters["Mode1"])
 
         Debug("Pin "+str(gpio_pin)+" was configured")
-        if Parameters["Mode2"]=="PU":
-            Debug("Pull up resistor configured")
-            resistor=GPIO.PUD_UP
-        elif Parameters["Mode2"]=="PD":
-            Debug("Pull Down resistor configured")
-            resistor=GPIO.PUD_DOWN
-        else:
-            Debug("No resistor configured")
 
         # By default false positive checks are switched OFF
         check_last_value = False
         check_consistency = False
-
-        # Get Interrupt and check mode config
-        if Parameters["Mode3"]=="Falling" or Parameters["Mode3"]=="FallingLast" or Parameters["Mode3"]=="FallingConsistency" or Parameters["Mode3"]=="FallingLastConsistency":
-            interrupt=GPIO.FALLING
-            Debug("Falling interrupt detected")
-            if Parameters["Mode3"]=="FallingLast":
-                check_last_value = True
-            elif Parameters["Mode3"]=="FallingConsistency":
-                check_consistency = True
-            elif Parameters["Mode3"]=="FallingLastConsistency":
-                check_last_value = True 
-                check_consistency = True
-        elif Parameters["Mode3"]=="Rising" or Parameters["Mode3"]=="RisingLast" or Parameters["Mode3"]=="RisingConsistency" or Parameters["Mode3"]=="RisingLastConsistency":
-            interrupt=GPIO.RISING
-            Debug("Rising Interrupt detected")
-            if Parameters["Mode3"]=="RisingLast":
-                check_last_value = True
-            elif Parameters["Mode3"]=="RisingConsistency":
-                check_consistency = True
-            elif Parameters["Mode3"]=="RisingLastConsistency":
-                check_last_value = True
-                check_consistency = True
-        elif Parameters["Mode3"]=="Both" or Parameters["Mode3"]=="BothLast" or Parameters["Mode3"]=="BothConsistency" or Parameters["Mode3"]=="BothLastConsistency":
-            interrupt=GPIO.BOTH
-            Debug("Both interrupt detected")
-            if Parameters["Mode3"]=="BothLast":
-                check_last_value = True
-            elif Parameters["Mode3"]=="BothConsistency":
-                check_consistency = True
-            elif Parameters["Mode3"]=="BothLastConsistency":
-                check_last_value = True
-                check_consistency = True
-
-        Debug("Interrupt Type = "+str(interrupt))
-        Debug("Consistency check = "+str(check_consistency))
-        Debug("Last value check = "+str(check_last_value))
-
-        bouncetime=int(Parameters["Mode4"])
-        Debug("Bouncetime = "+str(bouncetime))
 
         fn=Parameters["Mode5"]
         increment=float(Parameters["Mode6"])
@@ -242,17 +191,9 @@ class BasePlugin:
 
         # Setting up GPIO
         Debug("Setting up GPIO")
-        GPIO.setmode(GPIO.BCM)
-        if Parameters["Mode2"]=="PU" or Parameters["Mode2"]=="PD" :
-            Debug("Adding resistortype"+str(Parameters["Mode2"]))
-            GPIO.setup(gpio_pin, GPIO.IN, pull_up_down = resistor)
-        else:
-            GPIO.setup(gpio_pin, GPIO.IN)
-
-        # Store initial value
-        last_value=GPIO.input(gpio_pin)
-
-        GPIO.add_event_detect(gpio_pin, GPIO.BOTH, callback = Interrupt, bouncetime = bouncetime)
+        meter=Button(gpio_pin)
+        meter.when_pressed = Interrupt
+        #meter.when_released= Interrupt
 
         #Create device if needed
         if (len(Devices) == 0):
@@ -379,56 +320,7 @@ def Interrupt(channel):
 
     global interrupt
     global gpio_pin
-    global check_last_value
-    global check_consistency
-    global last_value
 
-    Debug("Start processing...")
-    Debug("Last value GPIO.input("+str(gpio_pin)+") = "+str(last_value))
-    
-    # Get current (new) GPIO value
-    new_value = GPIO.input(gpio_pin)
-    Debug("Detected value GPIO.input("+str(gpio_pin)+") = "+str(new_value))
-
-    if (fakereading):
-        if (check_consistency or check_last_value):
-                Debug("Testpulse = true, ignoring additional checks")
-    else:
-        # Consistency check logic
-        if check_consistency:
-            # Sleep for 300 ms to check pin state for false positives and compare with previous known value
-            time.sleep(0.3)
-            Debug("And awake..")
-                    
-            # Get current (newest) GPIO value
-            newest_value = GPIO.input(gpio_pin)
-            Debug("Newest value GPIO.input("+str(gpio_pin)+") = "+str(newest_value))
-
-            # Compare new value with newest (deviation within 300ms seems like a power fluctuation)
-            if new_value != newest_value:
-                Debug("Interrupt detected, but not consistent; last '"+str(last_value)+"' -> new '"+str(new_value)+"' -> newest '"+str(newest_value)+"'; false positive -> exit")
-                return
-
-        # Last value check logic    
-        if check_last_value:
-            # Compare newest value with last known value (before trigger)
-            if new_value == last_value:
-                Debug("Interrupt detected, but same value; last '"+str(last_value)+"' -> new '"+str(new_value)+"; false positive -> exit")
-                return
-
-            # We detect both falling and rising (otherwise we cannot detect false positives in both ways); but setting for Interrupt mode should be adhered to
-        if (new_value == 1 and interrupt == GPIO.FALLING) or (new_value == 0 and interrupt == GPIO.RISING):
-            Debug("Interrupt detected, but wrong type; last '"+str(last_value)+"' -> new '"+str(new_value)+"'; update 'last_value' with 'new_value' -> exit")
-            last_value = new_value
-            return
-
-        Debug("Interrupt detected, checks (if applicable) are OK;")
-        Debug("Last '"+str(last_value)+"' -> new '"+str(new_value)+"; change 'last_value' into new value")
-
-        # Store current value as 'last_value' and continue 
-        last_value = new_value
-        Debug("Checks passed, continue increasing the counter..")
-   
     Debug("Processing Meter Pulse (1 liter water)")
 
     counter=GetMeterFile()
