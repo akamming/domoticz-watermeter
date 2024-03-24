@@ -22,11 +22,6 @@
         Configure correctly. The plugin works using the default settings, but your system might need different settings...
         <ul style="list-style-type:square">
             <li>GPIO Pin Number - The GPIO Pin (BCM!) to which your NPN sensor is connected. To avoid conflicts, make sure the GPIO pin is not managed/configured somewhere else on your system to prevent confllicts. You can still use the normal GPIO drivers in domoticz for other pins as long as you don't configure the same pins.</li>
-            <li>Resistor Type - Configure the correct type of resistor. If the NPN is soldered to the GPIO without any physical resistors in a scheme, you definitely should configure a resistor here. </li>
-            <li>Interrupt and Check mode:</li>
-            <li>-Interrupt: Configure if you want the meter to be triggered if the pin goes from 1 to 0 (falling), from 0 to -1 (rising) or on both changes (both). Normally it should be either falling or rising, but not both (both will get you double readings).</li>
-            <li>-Last value check: Configure the false-positive check where the last value (on/off) is checked vs. the new value. Recommended when false-positives occur (ie. Domoticz meter value is higher than actual meter) is.</li>
-            <li>-Consistency check: Configure the false-positive check where consistency of the On/Off value is checked 300ms after the interrupt. Recommended when false-positives occur (ie. Domoticz meter value is higher than actual meter). </li>
             <li>Debounce Time - Configure the cooldown time after the interrupt to prevent interrupt flooding. A high number is recommended, but it should be less then the time it takes to have 1 liter going throught your watermeter, to prevent lost measurements.</li> 
             <li>Meter Reading File - The path of the file where you want the actual meter reading to be stored. If you do not specifiy a path, the homefolder of this plugin will be used</li>
             <li>Increment - The amount your domoticz counter must be incremented when a pulse of the watermeter is detected. In NL this is normally 1 liter. In belgium apparently this is 2 ticks per liter (value should then be 0.5).</li>
@@ -69,29 +64,6 @@
             <option label="GPIO26" value="26"/>
          </options>
          </param> 
-         <param field="Mode2" label="Resistor Type" width="150px">
-         <options>
-            <option label="PullUp" value="PU" default="true"/>
-            <option label="PullDown" value="PD"/>
-            <option label="None" value="None"/>
-         </options>
-         </param> 
-         <param field="Mode3" label="Interrupt and check mode" width="150px" required="true">
-         <options>
-            <option label="Falling / No checks" value="Falling" default="true"/>
-            <option label="Falling / Last value check" value="FallingLast"/>
-            <option label="Falling / Consistency check" value="FallingConsistency"/>
-            <option label="Falling / Last value check / Consistency check" value="FallingLastConsistency"/>
-            <option label="Rising  / No checks" value="Rising" default="true"/>
-            <option label="Rising  / Last value check" value="RisingLast"/>
-            <option label="Rising  / Consistency check" value="RisingConsistency"/>
-            <option label="Rising  / Last value check / Consistency check" value="RisingLastConsistency"/>
-            <option label="Both    / No checks" value="Both"/>	
-            <option label="Both    / Last value check" value="BothLast"/>	
-            <option label="Both    / Consistency check" value="BothConsistency"/>
-            <option label="Both    / Last value check / Consistency check" value="BothLastConsistency"/>	
-         </options>
-         </param>
          <param field="Mode4" label="Debounce time (ms)" width="150px" required="true">
          <options>
             <option label="0" value="0" />
@@ -144,11 +116,7 @@ class BasePlugin:
     def onStart(self):
         global debug
         global fakereading
-        global last_value
-        global interrupt
         global gpio_pin
-        global check_last_value
-        global check_consistency
         global meter
 
         Domoticz.Log("Watermeter plugin started...")
@@ -213,8 +181,7 @@ class BasePlugin:
 
 
     def onStop(self):
-        Debug("onStop called: Cleaning up GPIO")
-        GPIO.cleanup()
+        Debug("onStop called")
 
     def onConnect(self, Connection, Status, Description):
         Debug("onConnect called")
