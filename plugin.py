@@ -1,9 +1,9 @@
 # Basic Python Plugin Example
 #
-# Author: akamming / martin-g-it
+# Author: akamming 
 #
 """
-<plugin key="WMPS" name="WaterMeter NPN plugin" author="akamming / martin-g-it" version="1.0.2" wikilink="https://www.domoticz.com/wiki/Plugins" externallink="https://www.google.com/">
+<plugin key="WMPS" name="WaterMeter NPN plugin" author="akamming" version="1.0.2" wikilink="https://www.domoticz.com/wiki/Plugins" externallink="https://www.google.com/">
     <description>
         <h2>Watermeter</h2><br/>
         Plugin version of the Watermeter python script using a NPN sensor<br/>
@@ -181,7 +181,10 @@ class BasePlugin:
 
 
     def onStop(self):
+        global meter
+
         Debug("onStop called")
+        del meter
 
     def onConnect(self, Connection, Status, Description):
         Debug("onConnect called")
